@@ -397,6 +397,14 @@ class ThriftNamerInterface(
   def bind(req: thrift.BindReq): Future[thrift.Bound] = {
     val thrift.BindReq(dtabstr, ref@thrift.NameRef(reqStamp, reqName, ns), _) = req
     val dtab = Dtab.read(dtabstr)
+    val p = mkPath(reqName).show
+    log.info("path: %s", p)
+
+    if (p == "/svc/funny-quotes") {
+      log.info("sleeping for 60 seconds")
+      Thread.sleep(60000)
+    }
+
     mkPath(reqName) match {
       case Path.empty =>
         Trace.recordBinary("namerd.srv/bind.err", "empty path")

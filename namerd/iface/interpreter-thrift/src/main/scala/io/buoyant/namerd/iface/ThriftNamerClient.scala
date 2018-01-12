@@ -55,6 +55,7 @@ class ThriftNamerClient(
     Trace.recordBinary("namerd.client/bind.dtab", dtab.show)
     Trace.recordBinary("namerd.client/bind.path", path.show)
     val key = (dtab, path)
+    log.info("bind function called")
     bindCacheMu.synchronized {
       bindCache.get(key) match {
         case Some(act) =>
@@ -82,6 +83,7 @@ class ThriftNamerClient(
         Trace.recordBinary("namerd.client/bind.ns", namespace)
         Trace.recordBinary("namerd.client/bind.path", path.show)
 
+        log.info("looper func")
         val req = thrift.BindReq(tdtab, thrift.NameRef(stamp0, tpath, namespace), tclientId)
         pending = Trace.letClear(client.bind(req)).respond {
           case Return(thrift.Bound(stamp1, ttree, _)) =>
@@ -94,6 +96,7 @@ class ThriftNamerClient(
                 Trace.recordBinary("namerd.client/bind.err", e.toString)
                 Activity.Failed(e)
             }
+            log.info("loop stamp1")
             loop(stamp1, backoffs0)
 
           case Throw(e@thrift.BindFailure(reason, retry, _, _)) =>
@@ -111,6 +114,7 @@ class ThriftNamerClient(
             pending = Future.sleep(sleep).onSuccess(_ => loop(TStamp.empty, backoffs1))
         }
       }
+      log.debug("bind %s", path.show)
 
       loop(TStamp.empty, backoffs)
       Closable.make { deadline =>

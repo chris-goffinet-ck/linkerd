@@ -9,6 +9,7 @@ import com.twitter.finagle.stats.{DefaultStatsReceiver, StatsReceiver}
 import com.twitter.finagle.util.DefaultTimer
 import com.twitter.util._
 import java.util.concurrent.atomic.AtomicReference
+import com.twitter.logging.Logger
 
 trait DstBindingFactory[-Req, +Rsp] extends Closable {
   final def apply(dst: Dst.Path): Future[Service[Req, Rsp]] =
@@ -20,6 +21,7 @@ trait DstBindingFactory[-Req, +Rsp] extends Closable {
 }
 
 object DstBindingFactory {
+  private[this] implicit val log = Logger.get(getClass.getName)
 
   private[buoyant] class RefCount {
     // If non-None, refcount >= 0, indicating the number of active
@@ -155,6 +157,7 @@ object DstBindingFactory {
       def mk(dst: Dst.Path): ServiceFactory[Req, Rsp] = {
         // dtabs aren't available when NoBrokers is thrown so we add them here
         // as well as add a binding timeout
+        log.info("bind %s", namer)
         val dyn = new ServiceFactoryProxy(new DynBoundFactory(dst.bind(namer), treeCache)) {
           override def apply(conn: ClientConnection) = {
             val exc = new RequestTimeoutException(bindingTimeout.timeout, s"dyn binding ${dst.path.show}")
