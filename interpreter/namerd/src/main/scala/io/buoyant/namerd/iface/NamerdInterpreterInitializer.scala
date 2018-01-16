@@ -74,7 +74,9 @@ case class NamerdInterpreterConfig(
   namespace: Option[String],
   retry: Option[Retry],
   tls: Option[ClientTlsConfig],
-  failureThreshold: Option[FailureThresholdConfig]
+  failureThreshold: Option[FailureThresholdConfig],
+  connectTimeoutMs: Option[Int],
+  requestTimeoutMs: Option[Int]
 ) extends NamespacedInterpreterConfig { config =>
 
   @JsonIgnore
@@ -106,6 +108,8 @@ case class NamerdInterpreterConfig(
 
     val tlsParams = tls.map(_.params).getOrElse(Stack.Params.empty)
     val failureThresholdParams = failureThreshold.map(_.params).getOrElse(FailureThresholdConfig.defaultStackParam)
+    val requestTimeout = requestTimeoutMs.map(_.millis).getOrElse(1.second)
+    val connectTimeout = connectTimeoutMs.map(_.millis).getOrElse(1.second)
 
     val client = ThriftMux.client
       .withParams(ThriftMux.client.params ++ tlsParams ++ failureThresholdParams ++ params)
@@ -113,6 +117,8 @@ case class NamerdInterpreterConfig(
       .withMonitor(monitor)
       .withSessionQualifier.noFailFast
       .withSessionQualifier.noFailureAccrual
+      .withRequestTimeout(requestTimeout)
+      .withSession.acquisitionTimeout(connectTimeout)
 
     val iface = client.newIface[thrift.Namer.FutureIface](name, label)
 

@@ -28,7 +28,9 @@ case class NamerdHttpInterpreterConfig(
   dst: Option[Path],
   namespace: Option[String],
   retry: Option[Retry],
-  tls: Option[TlsClientConfig]
+  tls: Option[TlsClientConfig],
+  connectTimeoutMs: Option[Int],
+  requestTimeoutMs: Option[Int]
 ) extends NamespacedInterpreterConfig {
 
   @JsonIgnore
@@ -81,11 +83,15 @@ case class NamerdHttpInterpreterConfig(
     }
 
     val tlsParams = tls.map(_.params).getOrElse(Stack.Params.empty)
+    val requestTimeout = requestTimeoutMs.map(_.millis).getOrElse(1.second)
+    val connectTimeout = connectTimeoutMs.map(_.millis).getOrElse(1.second)
 
     val client = Http.client
       .withParams(Http.client.params ++ tlsParams ++ params + Http.Netty4Impl)
       .withSessionQualifier.noFailFast
       .withSessionQualifier.noFailureAccrual
+      .withRequestTimeout(requestTimeout)
+      .withSession.acquisitionTimeout(connectTimeout)
       .withStreaming(true)
       .transformed(retryTransformer)
 
